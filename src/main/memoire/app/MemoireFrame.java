@@ -1,20 +1,40 @@
 package main.memoire.app;
 
-import java.awt.HeadlessException;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class MemoireFrame extends javax.swing.JFrame {
+    private final List<Memoire> memoires;
+    private final ListTableModel tableModel;
     
-    public MemoireFrame() {
+    public MemoireFrame() throws SQLException {
         initComponents();
         setSize(1000, 600);
         setLocationRelativeTo(null);
+        
+        // Initialize the memoires list (e.g., fetch from the database)
+        memoires = MemoireConnection.getAllMemos();
 
+        // Initialize the class-level tableModel
+        tableModel = new ListTableModel(memoires);
+
+        // Set the model for the JTable
+        listTable.setModel(tableModel);
+
+        // Make everything visible
+        setVisible(true);
+    }
+    
+    // Utility method to run database operations in background
+    private void executeSwingWorker(SwingWorker<List<Memoire>, Void> worker) {
+        worker.execute();
     }
     
     /**
@@ -41,15 +61,15 @@ public class MemoireFrame extends javax.swing.JFrame {
         separator1 = new javax.swing.JSeparator();
         mainPanel = new javax.swing.JPanel();
         searchPanel = new javax.swing.JPanel();
-        searchTxtField = new javax.swing.JTextField();
         searchBtn = new javax.swing.JButton();
+        searchTxtField = new javax.swing.JTextField();
         listTableScrollPane = new javax.swing.JScrollPane();
         listTable = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("MÉmoire");
 
-        sidebarPanel.setBackground(new java.awt.Color(211, 211, 211));
+        sidebarPanel.setBackground(new java.awt.Color(255, 241, 214));
         sidebarPanel.setPreferredSize(new java.awt.Dimension(250, 600));
         sidebarPanel.setLayout(new java.awt.BorderLayout());
 
@@ -68,7 +88,7 @@ public class MemoireFrame extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 3, 3, 3);
         sidebarHelpPanel.add(sidebarIcon, gridBagConstraints);
 
-        dateLabel.setFont(new java.awt.Font("SansSerif", 0, 16)); // NOI18N
+        dateLabel.setFont(new java.awt.Font("SansSerif", 1, 16)); // NOI18N
         dateLabel.setText("Date");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -91,11 +111,11 @@ public class MemoireFrame extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 3, 3, 3);
         sidebarHelpPanel.add(countLabel, gridBagConstraints);
 
-        todayMemoireBtn.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        todayMemoireBtn.setFont(new java.awt.Font("SansSerif", 1, 14)); // NOI18N
         todayMemoireBtn.setForeground(new java.awt.Color(165, 139, 108));
         todayMemoireBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/book_ribbon.png"))); // NOI18N
         todayMemoireBtn.setText("Mémoires of Today");
-        todayMemoireBtn.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+        todayMemoireBtn.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
         todayMemoireBtn.setBorderPainted(false);
         todayMemoireBtn.setFocusPainted(false);
         todayMemoireBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -112,7 +132,7 @@ public class MemoireFrame extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 3, 3, 3);
         sidebarHelpPanel.add(todayMemoireBtn, gridBagConstraints);
 
-        allMemoireBtn.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        allMemoireBtn.setFont(new java.awt.Font("SansSerif", 1, 14)); // NOI18N
         allMemoireBtn.setForeground(new java.awt.Color(165, 139, 108));
         allMemoireBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/book_5.png"))); // NOI18N
         allMemoireBtn.setText("All Mémoires");
@@ -132,7 +152,7 @@ public class MemoireFrame extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 3, 3, 3);
         sidebarHelpPanel.add(allMemoireBtn, gridBagConstraints);
 
-        newMemoireBtn.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        newMemoireBtn.setFont(new java.awt.Font("SansSerif", 1, 14)); // NOI18N
         newMemoireBtn.setForeground(new java.awt.Color(165, 139, 108));
         newMemoireBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/note_add.png"))); // NOI18N
         newMemoireBtn.setText("New Mémoires");
@@ -152,7 +172,7 @@ public class MemoireFrame extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 3, 3, 3);
         sidebarHelpPanel.add(newMemoireBtn, gridBagConstraints);
 
-        importBtn.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        importBtn.setFont(new java.awt.Font("SansSerif", 1, 14)); // NOI18N
         importBtn.setForeground(new java.awt.Color(165, 139, 108));
         importBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/upload.png"))); // NOI18N
         importBtn.setText("Import");
@@ -167,7 +187,7 @@ public class MemoireFrame extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 3, 3, 3);
         sidebarHelpPanel.add(importBtn, gridBagConstraints);
 
-        exportBtn.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        exportBtn.setFont(new java.awt.Font("SansSerif", 1, 14)); // NOI18N
         exportBtn.setForeground(new java.awt.Color(165, 139, 108));
         exportBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/download.png"))); // NOI18N
         exportBtn.setText("Export");
@@ -205,7 +225,7 @@ public class MemoireFrame extends javax.swing.JFrame {
         getContentPane().add(sidebarPanel, java.awt.BorderLayout.WEST);
 
         mainPanel.setBackground(new java.awt.Color(255, 255, 255));
-        mainPanel.setPreferredSize(new java.awt.Dimension(300, 600));
+        mainPanel.setPreferredSize(new java.awt.Dimension(750, 600));
         mainPanel.setLayout(new java.awt.BorderLayout());
 
         searchPanel.setBackground(new java.awt.Color(255, 255, 255));
@@ -213,16 +233,16 @@ public class MemoireFrame extends javax.swing.JFrame {
         searchPanel.setOpaque(false);
         searchPanel.setLayout(new javax.swing.BoxLayout(searchPanel, javax.swing.BoxLayout.X_AXIS));
 
-        searchTxtField.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
-        searchTxtField.setText("Search Your Mémoires . . .");
-        searchTxtField.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        searchPanel.add(searchTxtField);
-
         searchBtn.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
         searchBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/search.png"))); // NOI18N
         searchBtn.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
         searchBtn.setBorderPainted(false);
         searchPanel.add(searchBtn);
+
+        searchTxtField.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
+        searchTxtField.setText("Search Your Mémoires . . .");
+        searchTxtField.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        searchPanel.add(searchTxtField);
 
         mainPanel.add(searchPanel, java.awt.BorderLayout.NORTH);
 
@@ -244,9 +264,14 @@ public class MemoireFrame extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
+        listTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                listTableMouseClicked(evt);
+            }
+        });
         listTableScrollPane.setViewportView(listTable);
 
-        mainPanel.add(listTableScrollPane, java.awt.BorderLayout.LINE_START);
+        mainPanel.add(listTableScrollPane, java.awt.BorderLayout.CENTER);
 
         getContentPane().add(mainPanel, java.awt.BorderLayout.CENTER);
 
@@ -254,97 +279,89 @@ public class MemoireFrame extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void todayMemoireBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_todayMemoireBtnActionPerformed
-        // This method is called when "Today Memos" button is clicked
-        SwingWorker<List<Memoire>, Void> worker = new SwingWorker<List<Memoire>, Void>() {
+        executeSwingWorker(new SwingWorker<List<Memoire>, Void>() {
             @Override
             protected List<Memoire> doInBackground() throws Exception {
-                // Fetch the memos created today from the database
                 return MemoireConnection.getMemosCreatedToday();
             }
 
             @Override
             protected void done() {
                 try {
-                    // Get the result of the background task
                     List<Memoire> todayMemos = get();
-
-                    // Check if there are any memos for today
-                    if (todayMemos.isEmpty()) {
-                        JOptionPane.showMessageDialog(MemoireFrame.this, "No memoires for today.");
-                    } else {
-                        // Create a new ListTableModel with the fetched data
-                        ListTableModel tableModel = new ListTableModel(todayMemos);
-
-                        // Set the table model to display today's memoires
-                        listTable.setModel(tableModel);
-
-                        // Manually refresh the table to ensure it updates
-                        listTable.revalidate();
-                        listTable.repaint();
-                    }
-                } catch (ExecutionException e) {
-                    JOptionPane.showMessageDialog(MemoireFrame.this, "Error loading today's memoires: " + e.getMessage(), "Execution Error", JOptionPane.ERROR_MESSAGE);
-                } catch (HeadlessException | InterruptedException e) {
-                    JOptionPane.showMessageDialog(MemoireFrame.this, "Error loading today's memoires: " + e.getMessage(), "Unknown Error", JOptionPane.ERROR_MESSAGE);
+                    updateTableData(todayMemos, "No mémoires for today.");
+                } catch (InterruptedException | ExecutionException e) {
+                    handleError("Error loading today's mémoires", e);
                 }
             }
-        };
-
-        // Start the background task
-        worker.execute();
+        });
     }//GEN-LAST:event_todayMemoireBtnActionPerformed
 
     private void allMemoireBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_allMemoireBtnActionPerformed
-        // This method is called when "All Memos" button is clicked
-        try {
-            // Fetch all memos from the database
-            List<Memoire> allMemos = MemoireConnection.getAllMemos();
-            if (allMemos.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "No memoires.");
-            } else {
-                // Create a new ListTableModel with the fetched data
-                ListTableModel tableModel = new ListTableModel(allMemos);
-
-                // Set the table model to display today's memos
-                listTable.setModel(tableModel);
-
-                // Manually refresh the table to ensure it updates
-                listTable.revalidate();
-                listTable.repaint();
+        executeSwingWorker(new SwingWorker<List<Memoire>, Void>() {
+            @Override
+            protected List<Memoire> doInBackground() throws Exception {
+                return MemoireConnection.getAllMemos();
             }
-        } catch (SQLException e) {
-            // Show an error dialog if the database query fails
-            JOptionPane.showMessageDialog(this, "Error loading all memoires: " + e.getMessage(), 
-                                          "Database Error", JOptionPane.ERROR_MESSAGE);
-        }
+
+            @Override
+            protected void done() {
+                try {
+                    List<Memoire> allMemos = get();
+                    updateTableData(allMemos, "You don't have any mémoires.");
+                } catch (InterruptedException | ExecutionException e) {
+                    handleError("Error loading all mémoires", e);
+                }
+            }
+        });
     }//GEN-LAST:event_allMemoireBtnActionPerformed
 
     private void newMemoireBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_newMemoireBtnActionPerformed
-        // Disable MemoireFrame while WritingFrame is open
-        this.setEnabled(false);
-
-        // Create an instance of WritingFrame (JFrame)
+        // Create a new Memoire object with default values
         WritingFrame writingFrame = new WritingFrame();
         writingFrame.setVisible(true);
-
-        // Re-enable MemoireFrame after WritingFrame is closed
-        writingFrame.addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                setEnabled(true);  // Re-enable MemoireFrame
-            }
-        });
     }//GEN-LAST:event_newMemoireBtnActionPerformed
-    
-    // Methods
-    // Custom TableModel class inside MemoireFrame
-    private class ListTableModel extends AbstractTableModel {
 
+    private void listTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_listTableMouseClicked
+        int selectedRow = listTable.getSelectedRow();
+        if (selectedRow != -1) {
+            Memoire selectedMemoire = memoires.get(selectedRow);
+            WritingFrame writingFrame = new WritingFrame();
+            writingFrame.setMemoireData(selectedMemoire);
+            writingFrame.setVisible(true);
+        }
+    }//GEN-LAST:event_listTableMouseClicked
+    
+    // Update table data or show a message if no data is found
+    private void updateTableData(List<Memoire> data, String noDataMessage) {
+        if (data.isEmpty()) {
+            JOptionPane.showMessageDialog(this, noDataMessage);
+        } else {
+            tableModel.refreshData(data);
+            refreshTable();
+        }
+    }
+    
+    // Handle errors uniformly
+    private void handleError(String message, Exception e) {
+        JOptionPane.showMessageDialog(this, message + ": " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        Logger.getLogger(MemoireFrame.class.getName()).log(Level.SEVERE, message, e);
+    }
+
+    private void refreshTable() {
+        listTable.revalidate();
+        listTable.repaint();
+    }
+    
+    // Inner TableModel class
+    private static class ListTableModel extends AbstractTableModel {
         private final List<Memoire> memoires;
-        private final String[] columnNames = { "Day & Date Created", "Title", "Preview", "Category", "Last Edited" };
+        private final String[] columnNames = {"Day & Date Created", "Title", "Preview", "Category", "Last Edited"};
+        private final SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, dd-MM-yyyy");
+        private final SimpleDateFormat timestampFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 
         public ListTableModel(List<Memoire> memoires) {
-            this.memoires = memoires;
+            this.memoires = new CopyOnWriteArrayList<>(memoires);
         }
 
         @Override
@@ -360,20 +377,16 @@ public class MemoireFrame extends javax.swing.JFrame {
         @Override
         public Object getValueAt(int rowIndex, int columnIndex) {
             Memoire memoire = memoires.get(rowIndex);
-            
+            if (memoire == null) return null;
+
             return switch (columnIndex) {
-                case 0 -> formatDate(memoire.getDayDateCreated()); 
-                case 1 -> memoire.getTitle();
-                case 2 -> memoire.getContents().length() > 20 ? memoire.getContents().substring(0, 20) : memoire.getContents();
-                case 3 -> memoire.getCategory();
+                case 0 -> formatDate(memoire.getDayDateCreated());
+                case 1 -> memoire.getTitle() != null ? memoire.getTitle() : "";
+                case 2 -> getPreview(memoire.getContents());
+                case 3 -> memoire.getCategory() != null ? memoire.getCategory() : "";
                 case 4 -> formatTimestamp(memoire.getLastEdited());
                 default -> null;
             };
-            // Day & Date Created
-            // Title
-            // Preview (First 20 characters of contents)
-            // Category
-            // Last Edited
         }
 
         @Override
@@ -382,16 +395,25 @@ public class MemoireFrame extends javax.swing.JFrame {
         }
 
         private String formatDate(java.sql.Date date) {
-            SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd-MM-yyyy");
-            return sdf.format(date);
+            return date != null ? dateFormat.format(date) : "";
         }
 
         private String formatTimestamp(java.sql.Timestamp timestamp) {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-            return sdf.format(timestamp);
+            return timestamp != null ? timestampFormat.format(timestamp) : "";
+        }
+
+        private String getPreview(String contents) {
+            return (contents != null && contents.length() > 20) ? contents.substring(0, 20) + "..." : (contents != null ? contents : "");
+        }
+
+        public void refreshData(List<Memoire> updatedMemoires) {
+            memoires.clear();
+            memoires.addAll(updatedMemoires);
+            fireTableDataChanged();
         }
     }
     
+    //Don't delete this
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
@@ -418,7 +440,11 @@ public class MemoireFrame extends javax.swing.JFrame {
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(() -> {
-            new MemoireFrame().setVisible(true);
+            try {
+                new MemoireFrame().setVisible(true);
+            } catch (SQLException ex) {
+                Logger.getLogger(MemoireFrame.class.getName()).log(Level.SEVERE, null, ex);
+            }
         });
     }
 

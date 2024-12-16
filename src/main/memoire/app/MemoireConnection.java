@@ -8,23 +8,31 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.text.SimpleDateFormat;
 import java.nio.file.Paths;
 import java.nio.file.Path;
+import java.text.ParseException;
 
-public class MemoireConnection {
-    /*    
+/*    
     sqlite3 "C:\Users\ZUHROH\Documents\NetBeansProjects\PBO2AppProjects\MemoireApp\src\resources\db\memoire_app.db"
     SELECT * FROM memoire_list;
     SELECT * FROM memoire_list WHERE DATE(daydate_created) = CURRENT_DATE;
+*/
+public class MemoireConnection {
+    // SQLite database URL, relative to the project root
+    private static final String DATABASE_URL = "jdbc:sqlite:" + getDatabasePath();
+    private static Connection connection = null;
 
-    */
-    // Main method to test the database connection
+    // Private constructor to prevent instantiation
+    private MemoireConnection() {}
+    
+    // Main method for testing the connection
     public static void main(String[] args) {
         try {
             Connection conn = MemoireConnection.getConnection();
             if (conn != null) {
                 System.out.println("Database connected successfully!");
-                closeConnection(); // Close connection after the test
+                closeConnection();
             } else {
                 System.out.println("Failed to connect to the database.");
             }
@@ -32,34 +40,20 @@ public class MemoireConnection {
             System.err.println("Error connecting to the database: " + e.getMessage());
         }
     }
-    
-    // Relative path to the database file from the project root
-    private static final String DATABASE_URL = "jdbc:sqlite:" + getDatabasePath();
-    private static Connection connection = null;
 
-    // Private constructor to prevent instantiation
-    private MemoireConnection() {
-    
-    }
-
-    // Method to retrieve the relative path of the database
+   // Get the absolute path to the database file
     private static String getDatabasePath() {
-        // Get the current working directory (project root)
-        String userDir = System.getProperty("user.dir");
-        
-        // Construct the path relative to the project root (assuming db is located in src/resources/db)
+        String userDir = System.getProperty("user.dir"); // Project root directory
         Path path = Paths.get(userDir, "src", "resources", "db", "memoire_app.db");
-        
         System.out.println("Database path: " + path.toAbsolutePath());
-        // Return the absolute path for SQLite connection
         return path.toAbsolutePath().toString();
     }
 
-    // Open connection - Do not close automatically here
+    // Get a connection to the database
     public static Connection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
             try {
-                Class.forName("org.sqlite.JDBC");
+                Class.forName("org.sqlite.JDBC"); // Load SQLite JDBC driver
                 connection = DriverManager.getConnection(DATABASE_URL);
             } catch (ClassNotFoundException | SQLException e) {
                 throw new SQLException("Failed to connect to the database.", e);
@@ -68,84 +62,82 @@ public class MemoireConnection {
         return connection;
     }
 
-    // Don't automatically close the connection here
+    // Close the database connection
     public static void closeConnection() {
         if (connection != null) {
             try {
                 connection.close();
+                connection = null; // Ensure connection is reset
             } catch (SQLException e) {
-                
+                System.err.println("Error closing database connection: " + e.getMessage());
             }
         }
     }
-    
-    // Method to get memoire created today
-    public static ArrayList<Memoire> getMemosCreatedToday() throws SQLException {
-        ArrayList<Memoire> todayMemos = new ArrayList<>();
 
-        // Get today's date in SQL Date format
-        java.sql.Date today = new java.sql.Date(System.currentTimeMillis());
+    // Get memos created today
+    public static List<Memoire> getMemosCreatedToday() throws SQLException {
+        List<Memoire> todayMemos = new ArrayList<>();
+        String sql = "SELECT * FROM memoire_list WHERE DATE(daydate_created) = DATE('now')";
 
-        // Corrected SQL query: use the correct table name "memoire_list"
-        String sql = "SELECT * FROM memoire_list WHERE DATE(daydate_created) = DATE('now', '+8 hours')";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
 
-        try (Connection conn = MemoireConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setDate(1, today);  // Set the current date as parameter
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    // Retrieve daydate_created and last_edited from ResultSet
-                    java.sql.Date daydateCreated = rs.getDate("daydate_created");  
-                    java.sql.Timestamp lastEdited = rs.getTimestamp("last_edited"); 
-
-                    // Create Memoire object with the retrieved fields
-                    Memoire memoire = new Memoire(
-                        rs.getInt("id"),
-                        rs.getString("title"),
-                        rs.getString("category"),
-                        rs.getString("contents"),
-                        daydateCreated,
-                        lastEdited
-                    );
-                    todayMemos.add(memoire);  // Add memo to the list
-                }
+            while (rs.next()) {
+                todayMemos.add(mapResultSetToMemoire(rs));
             }
         } catch (SQLException e) {
+            System.err.println("Error fetching today's memos: " + e.getMessage());
             throw e;
         }
-        System.out.println("Querying for today's memos: SELECT * FROM memoire_list WHERE DATE(daydate_created) = CURRENT_DATE");
-        return todayMemos;  // Return the list of today's memos
+
+        System.out.println("Fetched today's memos.");
+        return todayMemos;
     }
-    
-    // Method to get all memoires created
+
+    // Get all memoires
     public static List<Memoire> getAllMemos() throws SQLException {
         List<Memoire> memos = new ArrayList<>();
         String sql = "SELECT * FROM memoire_list";
-        try (Connection conn = MemoireConnection.getConnection();
+
+        try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                // Retrieve daydateMade and lastEdited from ResultSet
-                java.sql.Date daydateMade = rs.getDate("daydate_created");  
-                java.sql.Timestamp lastEdited = rs.getTimestamp("last_edited"); 
-
-                // Create Memoire object with the retrieved fields
-                Memoire memo = new Memoire(
-                    rs.getInt("id"),
-                    rs.getString("title"),
-                    rs.getString("category"),
-                    rs.getString("contents"),
-                    daydateMade,
-                    lastEdited
-                );
-                memos.add(memo);  // Add the memo to the list
+                memos.add(mapResultSetToMemoire(rs));
             }
         } catch (SQLException e) {
-            throw e;  // Rethrow the SQLException if it occurs
+            System.err.println("Error fetching all memos: " + e.getMessage());
+            throw e;
         }
-        return memos;  // Return the list of all memos
+
+        return memos;
+    }
+
+    // Utility method to map a ResultSet row to a Memoire object
+    private static Memoire mapResultSetToMemoire(ResultSet rs) throws SQLException {
+        int id = rs.getInt("id");
+        String title = rs.getString("title");
+        String category = rs.getString("category");
+        String contents = rs.getString("contents");
+
+        // Parse daydate_created
+        String dayDateCreatedString = rs.getString("daydate_created");
+        java.sql.Date dayDateCreated = null;
+        if (dayDateCreatedString != null) {
+            try {
+                java.util.Date parsedDate = new SimpleDateFormat("yyyy-MM-dd").parse(dayDateCreatedString);
+                dayDateCreated = new java.sql.Date(parsedDate.getTime());
+            } catch (ParseException e) {
+                System.err.println("Error parsing dayDateCreated: " + e.getMessage());
+            }
+        }
+
+        // Get lastEdited
+        java.sql.Timestamp lastEdited = rs.getTimestamp("last_edited");
+
+        // Return a new Memoire object
+        return new Memoire(id, title, category, contents, dayDateCreated, lastEdited);
     }
 }

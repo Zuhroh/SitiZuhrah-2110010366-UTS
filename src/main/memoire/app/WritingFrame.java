@@ -1,27 +1,57 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package main.memoire.app;
 
-import java.awt.HeadlessException;
-import java.sql.SQLException;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Frame;
+import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+import javax.swing.JDialog;
+import java.sql.Connection;
+import java.sql.Statement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import javax.swing.JPanel;
 
-/**
- *
- * @author ZUHROH
- */
 public class WritingFrame extends javax.swing.JFrame {
-    // This is the field that tracks the ID of the current memo
-    private int currentMemoireId = 0;
+    private Memoire currentMemoire;
+    private int currentMemoireId;
     
     public WritingFrame() {
         initComponents();
         setSize(550, 600);
         setLocationRelativeTo(null);
+        
+        // Initialize currentMemoire as a new memo for a new note
+        currentMemoire = new Memoire(); 
+        
+        // Set default date/time info for a new note
+        updateDateTimeInfo(null, null);
+        reloadCategories();
+    }
+    
+    // Setters for form fields
+    @Override
+    public void setTitle(String title) {
+        titleTxtField.setText(title);
     }
 
+    public void setCategory(String category) {
+        categoryCombox.setSelectedItem(category);
+    }
+
+    public void setContents(String contents) {
+        memoireTxtPane.setText(contents);
+    }
+
+    public final void updateDateTimeInfo(Date createdDate, Timestamp lastEdited) {
+        dateTimeInfoLabel.setText(formatDate(createdDate, lastEdited));
+    }
+    
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -46,11 +76,11 @@ public class WritingFrame extends javax.swing.JFrame {
         separator3 = new javax.swing.JSeparator();
         separator4 = new javax.swing.JSeparator();
         editorPanel = new javax.swing.JPanel();
-        imageBtn = new javax.swing.JButton();
         deleteBtn = new javax.swing.JButton();
+        addCategoryBtn = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("MÉmoire  ");
+        setTitle("Your MÉmoire");
 
         topPanel.setBackground(new java.awt.Color(255, 241, 214));
         topPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 2, 2, 2));
@@ -93,11 +123,17 @@ public class WritingFrame extends javax.swing.JFrame {
         categoryCombox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No Category" }));
         categoryCombox.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 241, 214)));
         categoryCombox.setName(""); // NOI18N
+        categoryCombox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                categoryComboxActionPerformed(evt);
+            }
+        });
         categoryPanel.add(categoryCombox);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
-        gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
+        gridBagConstraints.insets = new java.awt.Insets(1, 6, 1, 6);
         bodyPanel.add(categoryPanel, gridBagConstraints);
 
         memoireTxtPaneHelpPanel.setBackground(new java.awt.Color(255, 255, 255));
@@ -110,17 +146,18 @@ public class WritingFrame extends javax.swing.JFrame {
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 3;
+        gridBagConstraints.gridy = 4;
         gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.weighty = 0.1;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         bodyPanel.add(memoireTxtPaneHelpPanel, gridBagConstraints);
 
-        titleTxtField.setFont(new java.awt.Font("SansSerif", 0, 24)); // NOI18N
+        titleTxtField.setFont(new java.awt.Font("SansSerif", 1, 24)); // NOI18N
+        titleTxtField.setText("Title");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridy = 2;
         gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -129,7 +166,7 @@ public class WritingFrame extends javax.swing.JFrame {
         separator3.setPreferredSize(new java.awt.Dimension(520, 2));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridy = 5;
         gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -138,7 +175,7 @@ public class WritingFrame extends javax.swing.JFrame {
         separator4.setPreferredSize(new java.awt.Dimension(520, 2));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 2;
+        gridBagConstraints.gridy = 3;
         gridBagConstraints.gridwidth = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
@@ -146,12 +183,6 @@ public class WritingFrame extends javax.swing.JFrame {
 
         editorPanel.setOpaque(false);
         editorPanel.setLayout(new java.awt.GridLayout(1, 0, 20, 0));
-
-        imageBtn.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
-        imageBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/add_photo_alternate.png"))); // NOI18N
-        imageBtn.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        imageBtn.setBorderPainted(false);
-        editorPanel.add(imageBtn);
 
         deleteBtn.setFont(new java.awt.Font("SansSerif", 0, 14)); // NOI18N
         deleteBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/delete.png"))); // NOI18N
@@ -166,10 +197,25 @@ public class WritingFrame extends javax.swing.JFrame {
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 5;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_END;
+        gridBagConstraints.gridy = 6;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.EAST;
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 5, 5);
         bodyPanel.add(editorPanel, gridBagConstraints);
+
+        addCategoryBtn.setFont(new java.awt.Font("SansSerif", 1, 14)); // NOI18N
+        addCategoryBtn.setForeground(new java.awt.Color(165, 139, 108));
+        addCategoryBtn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/icons/new_label.png"))); // NOI18N
+        addCategoryBtn.setText("Add New Category");
+        addCategoryBtn.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        addCategoryBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                addCategoryBtnActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.insets = new java.awt.Insets(1, 6, 1, 6);
+        bodyPanel.add(addCategoryBtn, gridBagConstraints);
 
         getContentPane().add(bodyPanel, java.awt.BorderLayout.CENTER);
 
@@ -177,73 +223,220 @@ public class WritingFrame extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void saveBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveBtnActionPerformed
-        // Collect data from the fields
+        // Get the current memo from the UI fields (assuming you have fields like titleTxtField, categoryTxtField, etc.)
         String title = titleTxtField.getText();
-        String contents = memoireTxtPane.getText();
         String category = (String) categoryCombox.getSelectedItem();
+        String contents = memoireTxtPane.getText();
+        Timestamp lastEdited = new Timestamp(System.currentTimeMillis());
 
-        // Check if fields are empty
-        if (title.isEmpty() || contents.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Title and Contents cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
+         // If it's a new memo, create one, else update the current memo
+        if (currentMemoire.getId() == 0) {
+            currentMemoire = new Memoire(title, category, contents);
+            currentMemoire.setLastEdited(lastEdited);
+        } else {
+            currentMemoire.setTitle(title);
+            currentMemoire.setCategory(category);
+            currentMemoire.setContents(contents);
+            currentMemoire.setLastEdited(lastEdited);
         }
 
-        // Create Memoire object with the current data
-        Memoire memoire = new Memoire(currentMemoireId, title, category, contents, new java.sql.Date(System.currentTimeMillis()), new java.sql.Timestamp(System.currentTimeMillis()));
-
         try {
-            // Save memo (insert or update based on currentMemoireId)
-            MemoireHelper.saveMemoire(memoire);
-            JOptionPane.showMessageDialog(this, "Memoire saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-
-            // After saving, set the ID of the memo to reflect the actual database ID (if it was newly created)
-            if (currentMemoireId == 0) {
-                // For new memos, set the ID from the database after insert
-                currentMemoireId = memoire.getId(); // Get the generated ID for a new memo
-            }
-        } catch (HeadlessException | SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Error saving memoire: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            // Save or update the memo
+            MemoireHelper.saveMemoire(currentMemoire);
+            JOptionPane.showMessageDialog(this, "Memo saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error saving memo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_saveBtnActionPerformed
 
     private void deleteBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteBtnActionPerformed
-        // Check if a memo is selected (currentMemoireId should not be 0)
         if (currentMemoireId == 0) {
-            // Show an error message if no memo is selected
             JOptionPane.showMessageDialog(this, "No memoire selected to delete.", "Error", JOptionPane.ERROR_MESSAGE);
-            return; // Do not proceed with deletion
+            return;
         }
 
-        // Ask for confirmation before deleting
-        int confirm = JOptionPane.showConfirmDialog(this, 
-                "Are you sure you want to delete this memoire?", 
-                "Confirm Delete", 
-                JOptionPane.YES_NO_OPTION);
-
-        // If the user clicks "Yes" to confirm the deletion
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this memoire?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                // Delete the memo from the database using the currentMemoireId
                 MemoireHelper.deleteMemoire(currentMemoireId);
-
-                // Show success message after deletion
                 JOptionPane.showMessageDialog(this, "Memoire deleted successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-
-                // After deletion, reset the form to allow creating or selecting a new memo
                 resetForm();
-            } catch (HeadlessException | SQLException ex) {
-                // Show error message in case of any failure
-                JOptionPane.showMessageDialog(this, 
-                        "Error deleting memoire: " + ex.getMessage(), 
-                        "Error", 
-                        JOptionPane.ERROR_MESSAGE);
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Error deleting memoire: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }//GEN-LAST:event_deleteBtnActionPerformed
 
-    /**
-     * @param args the command line arguments
-     */
+    private void addCategoryBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addCategoryBtnActionPerformed
+        // Create and display the NewCategoryDialog
+        NewCategoryDialog dialog = new NewCategoryDialog(this);
+        dialog.setVisible(true);  // Show the dialog and wait for it to close
+
+        // Retrieve the new category after the dialog is closed
+        String newCategory = dialog.getNewCategory();
+
+        // Proceed if the new category is valid (not null and not empty)
+        if (newCategory != null && !newCategory.isEmpty()) {
+            try {
+                // Save the new category using MemoireHelper
+                MemoireHelper.saveCategory(newCategory, categoryCombox);
+                // Reload the categories to update the category list in the UI
+                reloadCategories();
+                // Show success message
+                JOptionPane.showMessageDialog(this, "Category added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "Error adding category to the database.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            // If category is empty or null, show a message
+            JOptionPane.showMessageDialog(this, "Please enter a valid category.", "Input Error", JOptionPane.WARNING_MESSAGE);
+        }
+    }//GEN-LAST:event_addCategoryBtnActionPerformed
+
+    private void categoryComboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_categoryComboxActionPerformed
+        ////
+    }//GEN-LAST:event_categoryComboxActionPerformed
+        
+    // Methods to handle Memoire data
+    public void setMemoireData(Memoire memoire) {
+        this.currentMemoire = memoire;
+        this.currentMemoireId = memoire.getId();
+
+        setTitle(memoire.getTitle());
+        setCategory(memoire.getCategory());
+        setContents(memoire.getContents());
+        updateDateTimeInfo(memoire.getDayDateCreated(), memoire.getLastEdited());
+    }
+    
+    private void resetForm() {
+        titleTxtField.setText("");
+        memoireTxtPane.setText("");
+        categoryCombox.setSelectedIndex(0);
+        currentMemoireId = 0;
+        dateTimeInfoLabel.setText("New memo. Save to track changes.");
+    }
+    
+    private void reloadCategories() { 
+        categoryCombox.removeAllItems(); // Remove existing items from the combo box
+        try (Connection conn = MemoireConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT DISTINCT category FROM memoire_list WHERE category IS NOT NULL AND category != ''")) {
+            while (rs.next()) {
+                categoryCombox.addItem(rs.getString("category"));
+            }
+            categoryCombox.addItem("No Category");  // Add "No Category" as a fallback option
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error loading categories: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Helper method to check if the category is already in the JComboBox
+    private boolean categoryExistsInComboBox(String category) {
+        for (int i = 0; i < categoryCombox.getItemCount(); i++) {
+            if (categoryCombox.getItemAt(i).equals(category)) {
+                return true;  // Category already exists in the combobox
+            }
+        }
+        return false;  // Category doesn't exist in the combobox
+    }
+
+    private String formatDate(Date createdDate, Timestamp lastEdited) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, dd-MM-yyyy");
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
+        if (createdDate == null) {
+            return "This is a new note. Please save your changes.";
+        }
+        String formattedDate = "Created on " + dateFormat.format(createdDate);
+        if (lastEdited != null) {
+            formattedDate += ", Last Edited at " + timeFormat.format(lastEdited);
+        }
+        return formattedDate;
+    }
+    
+    private class NewCategoryDialog extends JDialog {
+        private final JTextField categoryTextField;
+        private final JButton okButton;
+        private final JButton cancelButton;
+        private String newCategory;
+
+        // Constructor to initialize the dialog
+        public NewCategoryDialog(Frame parent) {
+            super(parent, "New Category", true);
+            setSize(350, 150);
+            setLocationRelativeTo(parent);
+
+            // Disable maximize button (non-resizable)
+            setResizable(false);  // Prevent resizing
+            setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+            // Initialize components
+            categoryTextField = new JTextField(20);
+            categoryTextField.setPreferredSize(new Dimension(100, 25));
+            okButton = new JButton("OK");
+            cancelButton = new JButton("Cancel");
+
+            // Layout the components using GridBagLayout for better alignment
+            setLayout(new java.awt.GridBagLayout());
+            java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+            gbc.insets = new java.awt.Insets(10, 10, 10, 10); // Padding around components
+
+            // Label for the category
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.anchor = java.awt.GridBagConstraints.WEST;
+            gbc.gridwidth = 1;
+            add(new JLabel("Enter new category:"), gbc);
+
+            // TextField for entering category
+            gbc.gridx = 1;
+            gbc.gridy = 0;
+            gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+            gbc.weightx = 1.0;  // This will make the JTextField expand horizontally
+            add(categoryTextField, gbc);
+
+            // Button panel to hold OK and Cancel buttons
+            gbc.gridx = 0;
+            gbc.gridy = 1;
+            gbc.gridwidth = 2;  // Make it span both columns
+            gbc.anchor = java.awt.GridBagConstraints.CENTER;
+            gbc.fill = java.awt.GridBagConstraints.NONE;
+
+            // Using a JPanel for buttons with FlowLayout for better alignment
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 5));  // Spacing between buttons
+            buttonPanel.add(okButton);
+            buttonPanel.add(cancelButton);
+            add(buttonPanel, gbc);
+
+            // Add action listeners for OK and Cancel buttons
+            okButton.addActionListener(evt -> onOk());
+            cancelButton.addActionListener(evt -> onCancel());
+
+            // Set default button for better user experience
+            getRootPane().setDefaultButton(okButton);
+        }
+
+        // Getter for the entered category
+        public String getNewCategory() {
+            return newCategory;
+        }
+
+        // Handle OK button click (set the new category)
+        private void onOk() {
+            newCategory = categoryTextField.getText().trim();
+            if (!newCategory.isEmpty() && newCategory.length() <= 50) {  // Limit the length to 50
+                dispose(); // Close the dialog if input is valid
+            } else {
+                JOptionPane.showMessageDialog(this, "Category cannot be empty or longer than 50 characters!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
+        // Handle Cancel button click (close the dialog without saving)
+        private void onCancel() {
+            newCategory = null; // Reset category to null to indicate no input
+            dispose(); // Close the dialog
+        }
+    }
+
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
@@ -276,6 +469,7 @@ public class WritingFrame extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton addCategoryBtn;
     private javax.swing.JPanel bodyPanel;
     private javax.swing.JComboBox<String> categoryCombox;
     private javax.swing.JLabel categoryLabel;
@@ -283,7 +477,6 @@ public class WritingFrame extends javax.swing.JFrame {
     private javax.swing.JLabel dateTimeInfoLabel;
     private javax.swing.JButton deleteBtn;
     private javax.swing.JPanel editorPanel;
-    private javax.swing.JButton imageBtn;
     private javax.swing.JScrollPane memoireScrollPane;
     private javax.swing.JTextPane memoireTxtPane;
     private javax.swing.JPanel memoireTxtPaneHelpPanel;
@@ -293,10 +486,4 @@ public class WritingFrame extends javax.swing.JFrame {
     private javax.swing.JTextField titleTxtField;
     private javax.swing.JPanel topPanel;
     // End of variables declaration//GEN-END:variables
-    private void resetForm() {
-        titleTxtField.setText("");  // Clear title field
-        memoireTxtPane.setText("");  // Clear memo contents
-        categoryCombox.setSelectedIndex(0);  // Reset category to the first item
-        currentMemoireId = 0;  // Reset memo ID (no memo selected)
-    }
 }
